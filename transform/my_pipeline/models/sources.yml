@@ -1,0 +1,8 @@
+version: 2
+
+sources:
+  - name: github_raw
+    database: DE_SPEEDRUN
+    schema: RAW
+    tables:
+      - name: RAW_COMMITS
