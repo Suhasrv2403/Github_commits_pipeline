@@ -1,0 +1,21 @@
+# Secrets
+.env
+profiles.yml
+secrets.json
+
+# Python
+__pycache__/
+*.pyc
+venv/
+env/
+.pytest_cache/
+
+# PyCharm & OS
+.idea/
+.DS_Store
+
+# dbt
+dbt_modules/
+target/
+logs/# created by virtualenv automatically
+*
