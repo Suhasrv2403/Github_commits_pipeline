@@ -724,3 +724,10 @@
 [2026-01-13T23:39:24.075+0000] {logging_mixin.py:151} INFO - [2026-01-13T23:39:24.075+0000] {dag.py:2915} INFO - Sync 1 DAGs
 [2026-01-13T23:39:24.110+0000] {logging_mixin.py:151} INFO - [2026-01-13T23:39:24.110+0000] {dag.py:3696} INFO - Setting next_dagrun for elt_pipeline to 2026-01-13T00:00:00+00:00, run_after=2026-01-14T00:00:00+00:00
 [2026-01-13T23:39:24.121+0000] {processor.py:179} INFO - Processing /opt/airflow/dags/elt_dag.py took 0.136 seconds
+[2026-01-13T23:39:54.569+0000] {processor.py:157} INFO - Started process (PID=781) to work on /opt/airflow/dags/elt_dag.py
+[2026-01-13T23:39:54.571+0000] {processor.py:829} INFO - Processing file /opt/airflow/dags/elt_dag.py for tasks to queue
+[2026-01-13T23:39:54.573+0000] {logging_mixin.py:151} INFO - [2026-01-13T23:39:54.572+0000] {dagbag.py:539} INFO - Filling up the DagBag from /opt/airflow/dags/elt_dag.py
+[2026-01-13T23:39:54.600+0000] {processor.py:839} INFO - DAG(s) dict_keys(['elt_pipeline']) retrieved from /opt/airflow/dags/elt_dag.py
+[2026-01-13T23:39:54.634+0000] {logging_mixin.py:151} INFO - [2026-01-13T23:39:54.634+0000] {dag.py:2915} INFO - Sync 1 DAGs
+[2026-01-13T23:39:54.656+0000] {logging_mixin.py:151} INFO - [2026-01-13T23:39:54.656+0000] {dag.py:3696} INFO - Setting next_dagrun for elt_pipeline to 2026-01-13T00:00:00+00:00, run_after=2026-01-14T00:00:00+00:00
+[2026-01-13T23:39:54.666+0000] {processor.py:179} INFO - Processing /opt/airflow/dags/elt_dag.py took 0.103 seconds
