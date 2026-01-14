@@ -29,7 +29,8 @@ jobs:
         run: pip install dbt-snowflake
 
       - name: Run dbt Compile
-        run: |
-          cd transform/my_pipeline
-          dbt deps
-          dbt compile --profiles-dir . --profile ci_profile
+          run: |
+            cd transform/my_pipeline
+            cp ci_profiles.yml profiles.yml
+            dbt deps
+            dbt compile --profiles-dir . --profile ci_profile
