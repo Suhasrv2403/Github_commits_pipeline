@@ -1,3 +1,17 @@
-requests
-boto3
+# --- Core Data Libraries ---
 pandas
+numpy
+requests
+
+# --- AWS Connection ---
+boto3
+botocore
+
+# --- Environment Variables ---
+# We removed 'dotenv' because it conflicts with python-dotenv
+python-dotenv
+
+# --- Transformation (Critical for your project) ---
+# You didn't list these, but you NEED them for the container to run dbt
+dbt-core
+dbt-snowflake

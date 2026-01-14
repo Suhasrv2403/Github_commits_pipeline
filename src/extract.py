@@ -3,7 +3,8 @@ import requests
 import json
 import boto3
 from datetime import datetime
-
+from dotenv import load_dotenv
+load_dotenv()
 # Load secrets from Environment Variables (Docker will provide these)
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
 AWS_BUCKET = os.getenv('AWS_BUCKET')

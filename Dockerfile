@@ -1,15 +1,15 @@
-# Use a lightweight Python image
-FROM python:3.9-slim
+# Start with Airflow
+FROM apache/airflow:2.7.1
 
-# Set working directory inside container
-WORKDIR /app
+USER root
+# Install git (required for dbt dependencies)
+RUN apt-get update && apt-get install -y git && apt-get clean
 
-# Copy requirements first (better caching)
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+USER airflow
 
-# Copy the rest of the code
-COPY src/ src/
+# Install python libraries
+COPY requirements.txt /requirements.txt
+RUN pip install --no-cache-dir -r /requirements.txt
 
-# Command to run when container starts
-CMD ["python", "src/extract.py"]
+# Copy your project files
+COPY --chown=airflow:root . /opt/airflow/

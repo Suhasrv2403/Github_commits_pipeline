@@ -1,5 +1,5 @@
 
-  create or replace   view DE_SPEEDRUN.ANALYTICS.stg_commits
+  create or replace   view DE_SPEEDRUN.PUBLIC.stg_commits
   
    as (
     WITH raw_source AS (

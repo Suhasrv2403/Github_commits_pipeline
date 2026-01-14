@@ -8,5 +8,5 @@ SELECT
     commit_url,
     -- Simple transformation: extract just the date for daily reporting
     TO_DATE(commit_at) as commit_date
-FROM DE_SPEEDRUN.ANALYTICS.stg_commits
+FROM DE_SPEEDRUN.PUBLIC.stg_commits
 -- We use ref() so dbt knows to run stg_commits first!
