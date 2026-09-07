@@ -9,6 +9,7 @@ __pycache__/
 venv/
 env/
 .pytest_cache/
+.ruff_cache/
 
 # PyCharm & OS
 .idea/
@@ -18,4 +19,4 @@ env/
 dbt_modules/
 target/
 logs/
-airflow/logs/
+orchestration/logs/

@@ -56,5 +56,8 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements-dev.txt
 
+      - name: Lint
+        run: ruff check src/ tests/ orchestration/dags/ conftest.py
+
       - name: Run tests
         run: pytest tests/ -v

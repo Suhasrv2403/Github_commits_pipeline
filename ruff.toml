@@ -1,0 +1,8 @@
+# Minimal, explicit lint rule selection so `ruff check` behaves the same
+# locally and in CI regardless of ruff's own evolving defaults across
+# versions. E4/E7/E9 (a conservative pycodestyle subset) + F (pyflakes)
+# catches real bugs (unused imports, undefined names, syntax issues)
+# without imposing style opinions (import sorting, forced timezone-aware
+# datetimes, etc.) on code that predates this lint setup.
+[lint]
+select = ["E4", "E7", "E9", "F"]

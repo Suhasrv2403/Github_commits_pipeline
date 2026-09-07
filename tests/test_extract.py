@@ -1,9 +1,11 @@
-"""Unit tests for src/extract.py's GitHub extraction logic.
+"""Unit tests for src/extract.py's GitHub extraction and S3 upload logic.
 
-Covers the pagination loop and error handling in get_commits(), which had
-no test coverage before. requests.Session.get is mocked throughout so no
-network calls are made and no GITHUB_TOKEN is required.
+Covers the pagination loop and error handling in get_commits(), and the
+success/failure paths of upload_to_s3(). requests.Session.get and
+boto3.client are mocked throughout so no network calls are made and no
+GITHUB_TOKEN/AWS credentials are required.
 """
+import json
 from unittest.mock import MagicMock, patch
 
 import requests
@@ -74,3 +76,31 @@ def test_get_commits_returns_empty_list_on_first_page_failure(mock_get):
 
     assert result == []
     assert mock_get.call_count == 1
+
+
+@patch("boto3.client")
+def test_upload_to_s3_writes_expected_bucket_key_and_body(mock_boto_client):
+    """upload_to_s3 should PUT the JSON-serialized data to raw/<filename>
+    in the configured bucket."""
+    mock_s3 = MagicMock()
+    mock_boto_client.return_value = mock_s3
+    data = [{"sha": "a"}]
+
+    extract.upload_to_s3(data, "commits_20260101.json")
+
+    mock_s3.put_object.assert_called_once()
+    _, kwargs = mock_s3.put_object.call_args
+    assert kwargs["Bucket"] == extract.AWS_BUCKET
+    assert kwargs["Key"] == "raw/commits_20260101.json"
+    assert json.loads(kwargs["Body"]) == data
+
+
+@patch("boto3.client")
+def test_upload_to_s3_swallows_errors_without_raising(mock_boto_client):
+    """A failed S3 upload should be caught and logged, not propagated —
+    the DAG task shouldn't crash on a transient S3 issue mid-print."""
+    mock_s3 = MagicMock()
+    mock_s3.put_object.side_effect = Exception("S3 is down")
+    mock_boto_client.return_value = mock_s3
+
+    extract.upload_to_s3([{"sha": "a"}], "commits_20260101.json")  # must not raise
