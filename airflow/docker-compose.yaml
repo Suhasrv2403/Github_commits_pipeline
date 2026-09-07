@@ -1,23 +1,21 @@
+# Run from the repo root with:
+#   docker compose --env-file .env -f airflow/docker-compose.yaml up
+# so that the ${...} substitutions below resolve from the same .env file
+# used by src/extract.py and airflow/dags/elt_dag.py (see .env.example).
+# Generate a Fernet key with:
+#   python3 -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
 version: '3'
 services:
   airflow:
     build: .
     environment:
       # --- UPDATED CONFIGURATION ---
-      # SECURITY NOTE: the Postgres credentials, Fernet key, and admin
-      # user/password below are static values checked into version control.
-      # Fernet key encrypts Airflow connection passwords at rest, so a
-      # leaked key exposes any secrets stored via Airflow Connections; the
-      # admin/admin login is a default credential. This is acceptable only
-      # for disposable local development — see review summary for the
-      # recommendation to move these to a local .env / secrets manager
-      # before any shared or internet-reachable deployment.
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
-      - AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=
+      - AIRFLOW__CORE__FERNET_KEY=${AIRFLOW_FERNET_KEY:?Set AIRFLOW_FERNET_KEY in .env, see .env.example}
       - AIRFLOW__CORE__LOAD_EXAMPLES=False
-      - AIRFLOW_ADMIN_USER=admin
-      - AIRFLOW_ADMIN_PASSWORD=admin
+      - AIRFLOW_ADMIN_USER=${AIRFLOW_ADMIN_USER:-admin}
+      - AIRFLOW_ADMIN_PASSWORD=${AIRFLOW_ADMIN_PASSWORD:?Set AIRFLOW_ADMIN_PASSWORD in .env, see .env.example}
     volumes:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
@@ -29,7 +27,9 @@ services:
       - "8080:8080"
     # --- UPDATED COMMAND ---
     # We use 'db migrate' instead of 'db init', and we create the user safely.
-    command: bash -c "airflow db migrate && airflow users create --username admin --password admin --firstname Peter --lastname Parker --role Admin --email spiderman@superhero.com && airflow webserver & airflow scheduler"
+    # Username/password read from the container env (set above from .env)
+    # instead of being hardcoded.
+    command: bash -c "airflow db migrate && airflow users create --username \"$$AIRFLOW_ADMIN_USER\" --password \"$$AIRFLOW_ADMIN_PASSWORD\" --firstname Peter --lastname Parker --role Admin --email spiderman@superhero.com && airflow webserver & airflow scheduler"
     depends_on:
       - postgres
 

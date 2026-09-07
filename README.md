@@ -78,20 +78,13 @@ cd Github_commits_pipeline
 ```
 
 ### 2. Configure Secrets
-Create a .env file in the root directory:
+Copy [.env.example](.env.example) to `.env` in the root directory and fill in real values
+(GitHub token, AWS keys, Snowflake credentials, and an Airflow Fernet key —
+the file has a one-liner for generating the latter). Never commit `.env`.
+
+### 3. Start Airflow (Docker Compose)
 ```bash
-SNOWFLAKE_ACCOUNT=your_account
-SNOWFLAKE_USER=your_user
-SNOWFLAKE_PASSWORD=your_password
-SNOWFLAKE_ROLE=accountadmin
-AWS_ACCESS_KEY_ID=your_aws_key
-AWS_SECRET_ACCESS_KEY=your_aws_secret
-GITHUB_TOKEN=your_github_token
-```
-### 3. Initialize Airflow
-```bash
-export AIRFLOW_HOME=$(pwd)/airflow
-airflow scheduler & airflow webserver
+docker compose --env-file .env -f airflow/docker-compose.yaml up
 ```
 
 ### 4. Trigger the Pipeline
