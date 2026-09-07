@@ -4,6 +4,14 @@ services:
     build: .
     environment:
       # --- UPDATED CONFIGURATION ---
+      # SECURITY NOTE: the Postgres credentials, Fernet key, and admin
+      # user/password below are static values checked into version control.
+      # Fernet key encrypts Airflow connection passwords at rest, so a
+      # leaked key exposes any secrets stored via Airflow Connections; the
+      # admin/admin login is a default credential. This is acceptable only
+      # for disposable local development — see review summary for the
+      # recommendation to move these to a local .env / secrets manager
+      # before any shared or internet-reachable deployment.
       - AIRFLOW__DATABASE__SQL_ALCHEMY_CONN=postgresql+psycopg2://airflow:airflow@postgres/airflow
       - AIRFLOW__CORE__EXECUTOR=LocalExecutor
       - AIRFLOW__CORE__FERNET_KEY=46BKJoQYlPPOexq0OhDZnIlNepKFf87WFwLbfzqDDho=

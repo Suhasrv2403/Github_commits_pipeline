@@ -1,3 +1,8 @@
+# dbt connection profile used only in CI (.github/workflows/dbt_ci.yml),
+# where it is copied to profiles.yml so `dbt compile` can resolve the
+# CI_TESTING schema without a developer's local ~/.dbt/profiles.yml.
+# Credentials are pulled from GitHub Actions secrets via env_var(), never
+# hardcoded here.
 ci_profile:
   target: dev
   outputs:

@@ -1,20 +1,40 @@
+"""Airflow DAG for the GitHub-to-Snowflake ELT pipeline.
+
+Defines the `elt_pipeline` DAG, which runs daily and chains three
+BashOperator tasks against the project's Python/dbt code (mounted into
+the Airflow container, see airflow/docker-compose.yaml):
+
+    extract_github_data -> dbt_transform -> dbt_test
+
+1. extract_github_data: runs src/extract.py to pull commits from the
+   GitHub API and land them in S3.
+2. dbt_transform: runs `dbt run` against transform/my_pipeline to build
+   the staging/fact models from the raw data in Snowflake.
+3. dbt_test: runs `dbt test` to validate the resulting models
+   (see transform/my_pipeline/models/schema.yml).
+
+Secrets (GitHub/AWS/Snowflake credentials) are not set as Airflow
+Variables/Connections; they are read from a mounted `.env` file and
+merged into each task's shell environment.
+"""
 from datetime import datetime, timedelta
+from typing import Any
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from dotenv import dotenv_values
 import os
 
 # 1. Load the secrets
-config = dotenv_values("/opt/airflow/.env")
+config: dict[str, str | None] = dotenv_values("/opt/airflow/.env")
 
 # 2. LOAD SYSTEM DEFAULTS (Critical Fix!) 🛠️
 # Start with the existing system environment (which contains the PATH to dbt)
-env_config = os.environ.copy()
+env_config: dict[str, str] = os.environ.copy()
 
 # 3. Merge your secrets into the system environment
 env_config.update(config)
 
-default_args = {
+default_args: dict[str, Any] = {
     'owner': 'airflow',
     'depends_on_past': False,
     'email_on_failure': False,

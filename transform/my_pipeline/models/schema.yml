@@ -1,6 +1,20 @@
 version: 2
 
 models:
+  - name: stg_commits
+    description: "Staging model: parses raw GitHub commit JSON (github_raw.RAW_COMMITS) into typed columns."
+    columns:
+      - name: commit_hash
+        description: "Commit SHA, parsed from raw_data:sha"
+        tests:
+          - unique
+          - not_null
+
+      - name: author_name
+        description: "Commit author name, parsed from raw_data:commit:author:name"
+        tests:
+          - not_null
+
   - name: fact_commits
     description: "Final table of commits from the repo"
     columns:

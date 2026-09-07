@@ -1,3 +1,5 @@
+# Extra Python packages installed into the Airflow image (airflow/Dockerfile),
+# on top of the apache/airflow base image, so DAG tasks can call dbt/boto3/etc.
 apache-airflow-providers-snowflake
 dbt-snowflake
 pandas

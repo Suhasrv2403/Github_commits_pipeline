@@ -50,9 +50,12 @@ graph LR
 ```bash
 ├── airflow/
 │   ├── dags/                  # Airflow DAGs (Pipeline logic)
-│   └── scripts/               # Python scripts for AWS/GitHub logic
-├── dbt_project/
-│   ├── models/                # SQL transformation logic (Staging & Marts)
+│   ├── Dockerfile             # Airflow image (adds dbt/boto3/etc.)
+│   └── docker-compose.yaml    # Local Airflow + Postgres stack
+├── src/
+│   └── extract.py             # GitHub -> S3 extraction script
+├── transform/my_pipeline/     # dbt project
+│   ├── models/                # SQL transformation logic (Staging & Fact)
 │   ├── tests/                 # Custom data quality tests
 │   └── dbt_project.yml        # dbt configuration
 ├── .github/workflows/         # CI/CD YAML configurations
@@ -62,16 +65,16 @@ graph LR
 ## 📊 Data Modeling (dbt)
 * The transformation layer follows Dimensional Modeling principles:
 
-* stg_commits: cleans raw JSON data, casts timestamps, and standardizes author names.
+* stg_commits: cleans raw JSON data and casts timestamps/author names into typed columns.
 
-* fct_daily_metrics: aggregates commit volume by day and author to track velocity trends.
+* fact_commits: materializes one row per commit (with a derived `commit_date`) for daily reporting.
 
 ## 🚀 How to Run Locally
 
 ### 1. Clone the Repository
 ```bash
-git clone [https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME.git](https://github.com/YOUR_GITHUB_USERNAME/YOUR_REPO_NAME.git)
-cd YOUR_REPO_NAME
+git clone https://github.com/Suhasrv2403/Github_commits_pipeline.git
+cd Github_commits_pipeline
 ```
 
 ### 2. Configure Secrets
@@ -92,7 +95,7 @@ airflow scheduler & airflow webserver
 ```
 
 ### 4. Trigger the Pipeline
-* Access the UI at http://localhost:8080 and toggle the github_elt_pipeline DAG to ON.
+* Access the UI at http://localhost:8080 and toggle the `elt_pipeline` DAG to ON.
 
 Built by Suhas Ramesh Vittal
 

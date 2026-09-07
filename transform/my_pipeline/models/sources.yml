@@ -1,8 +1,11 @@
 version: 2
 
+# Raw landing zone in Snowflake, populated externally (COPY INTO from the
+# AWS S3 objects written by src/extract.py) — not managed by dbt itself.
 sources:
   - name: github_raw
     database: DE_SPEEDRUN
     schema: RAW
     tables:
       - name: RAW_COMMITS
+        description: "Raw GitHub commit JSON, one row per COPY INTO batch, with a raw_data VARIANT column and an ingested_at load timestamp."

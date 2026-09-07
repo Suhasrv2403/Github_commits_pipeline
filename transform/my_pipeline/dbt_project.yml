@@ -18,5 +18,7 @@ clean-targets:
 
 models:
   my_pipeline:
-    # Configures all models in this project
+    # Default materialization for all models in this project; individual
+    # models (e.g. fact_commits.sql) can override this via their own
+    # {{ config(...) }} block.
     +materialized: view

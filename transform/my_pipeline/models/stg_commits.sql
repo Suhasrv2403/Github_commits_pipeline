@@ -1,3 +1,9 @@
+-- Staging model: cleans/casts the raw GitHub commit JSON landed in Snowflake
+-- (via S3 + an external COPY INTO, see sources.yml for github_raw.RAW_COMMITS)
+-- into typed columns. Consumed by fact_commits.sql.
+-- Input:  github_raw.RAW_COMMITS (raw_data VARIANT, ingested_at TIMESTAMP)
+-- Output: one row per commit with commit_hash, author_name, commit_at,
+--         commit_message, commit_url, ingested_at
 WITH raw_source AS (
     SELECT * FROM {{ source('github_raw', 'RAW_COMMITS') }}
 ),

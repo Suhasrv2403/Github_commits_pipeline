@@ -1,3 +1,6 @@
+-- Fact model: one row per commit, materialized as a table for downstream
+-- reporting/BI. Input: stg_commits (see stg_commits.sql). Output adds
+-- commit_date (a plain DATE) alongside the staged columns for daily rollups.
 {{ config(
     materialized='table'
 ) }}

@@ -17,6 +17,5 @@ env/
 # dbt
 dbt_modules/
 target/
-logs/# created by virtualenv automatically
-*
+logs/
 airflow/logs/
