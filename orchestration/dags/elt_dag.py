@@ -21,6 +21,11 @@ the Airflow container, see orchestration/docker-compose.yaml):
 Secrets (GitHub/AWS/Snowflake credentials) are not set as Airflow
 Variables/Connections; they are read from a mounted `.env` file and
 merged into each task's shell environment.
+
+Non-secret scheduling settings (schedule interval, retries, start date)
+are read from the `orchestration:` section of config.yml at the repo
+root (mounted into the container, see orchestration/docker-compose.yaml),
+falling back to the defaults below if that file or key is absent.
 """
 from datetime import datetime, timedelta
 from typing import Any
@@ -28,6 +33,7 @@ from airflow import DAG
 from airflow.operators.bash import BashOperator
 from dotenv import dotenv_values
 import os
+import yaml
 
 # 1. Load the secrets
 config: dict[str, str | None] = dotenv_values("/opt/airflow/.env")
@@ -39,21 +45,36 @@ env_config: dict[str, str] = os.environ.copy()
 # 3. Merge your secrets into the system environment
 env_config.update(config)
 
+# 4. Load non-secret scheduling config, falling back to these defaults
+# (which match what used to be hardcoded here) if config.yml is missing.
+_ORCHESTRATION_CONFIG_DEFAULTS: dict[str, Any] = {
+    'schedule_interval': '@daily',
+    'retries': 1,
+    'retry_delay_minutes': 5,
+    'start_date': '2024-01-01',
+}
+try:
+    with open('/opt/airflow/config.yml') as f:
+        _file_config = (yaml.safe_load(f) or {}).get('orchestration', {}) or {}
+except FileNotFoundError:
+    _file_config = {}
+orchestration_config: dict[str, Any] = {**_ORCHESTRATION_CONFIG_DEFAULTS, **_file_config}
+
 default_args: dict[str, Any] = {
     'owner': 'airflow',
     'depends_on_past': False,
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retries': orchestration_config['retries'],
+    'retry_delay': timedelta(minutes=orchestration_config['retry_delay_minutes']),
 }
 
 with DAG(
     'elt_pipeline',
     default_args=default_args,
     description='A simple ELT pipeline for GitHub Data',
-    schedule_interval='@daily',
-    start_date=datetime(2024, 1, 1),
+    schedule_interval=orchestration_config['schedule_interval'],
+    start_date=datetime.strptime(orchestration_config['start_date'], '%Y-%m-%d'),
     catchup=False,
 ) as dag:
 
@@ -67,21 +88,21 @@ with DAG(
     # Task 2: Load raw JSON from S3 into Snowflake (github_raw.RAW_COMMITS)
     t2 = BashOperator(
         task_id='load_to_snowflake',
-        bash_command='cd /opt/airflow/transform/my_pipeline && dbt run-operation load_raw_commits --profiles-dir .',
+        bash_command='cd /opt/airflow/dbt && dbt run-operation load_raw_commits --profiles-dir .',
         env=env_config,
     )
 
     # Task 3: dbt Run
     t3 = BashOperator(
         task_id='dbt_transform',
-        bash_command='cd /opt/airflow/transform/my_pipeline && dbt run --profiles-dir .',
+        bash_command='cd /opt/airflow/dbt && dbt run --profiles-dir .',
         env=env_config,
     )
 
     # Task 4: dbt Test
     t4 = BashOperator(
         task_id='dbt_test',
-        bash_command='cd /opt/airflow/transform/my_pipeline && dbt test --profiles-dir .',
+        bash_command='cd /opt/airflow/dbt && dbt test --profiles-dir .',
         env=env_config,
     )
 

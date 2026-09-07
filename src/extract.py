@@ -12,6 +12,10 @@ python-dotenv, or injected by Docker/Airflow):
     AWS_ACCESS_KEY_ID       - AWS access key
     AWS_SECRET_ACCESS_KEY   - AWS secret key
 
+Tunable (non-secret) settings are read from config.yml at the repo root
+(the `extract:` section) if present, falling back to the defaults below
+so this script still runs correctly with zero setup.
+
 Output:
     An object written to `s3://$AWS_BUCKET/raw/commits_<YYYYMMDD>.json`
     containing the raw list of GitHub commit objects as returned by the
@@ -24,6 +28,8 @@ import os
 import requests
 import json
 import boto3
+import yaml
+from pathlib import Path
 from datetime import datetime
 from dotenv import load_dotenv
 from urllib3.util.retry import Retry
@@ -34,20 +40,57 @@ AWS_BUCKET = os.getenv('AWS_BUCKET')
 AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
-# Pipeline tuning constants. These are currently hardcoded rather than
-# environment-driven; see .env.example / README for the reproducibility note.
-DEFAULT_REPO_OWNER = 'apache'
-DEFAULT_REPO_NAME = 'airflow'
-MAX_PAGES = 5          # Fetch at most 5 pages (~150 commits) per run
-PER_PAGE = 30          # GitHub API results per page
-MAX_CONNECTION_RETRIES = 3  # Retries for the underlying HTTP connection (see note below)
-RETRY_BACKOFF_FACTOR = 1.0  # Seconds; urllib3 sleeps backoff_factor * (2 ** (retry_count - 1))
+# Repo-root config.yml path (this file lives in src/, config.yml is one
+# level up). Kept as a module constant so tests can monkeypatch it.
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yml"
+
+# Defaults, used verbatim if config.yml is missing or doesn't set a key —
+# these match what used to be hardcoded directly in this file.
+_EXTRACT_CONFIG_DEFAULTS = {
+    'repo_owner': 'apache',
+    'repo_name': 'airflow',
+    'max_pages': 5,
+    'per_page': 30,
+    'max_connection_retries': 3,
+    'retry_backoff_factor': 1.0,
+    'retryable_status_codes': [429, 500, 502, 503, 504],
+}
+
+
+def load_extract_config(config_path: Path = CONFIG_PATH) -> dict:
+    """Load the `extract:` section of config.yml, layered over defaults.
+
+    Args:
+        config_path: Path to the YAML config file. Defaults to config.yml
+            at the repo root.
+
+    Returns:
+        A dict with all of _EXTRACT_CONFIG_DEFAULTS's keys, overridden by
+        whatever config.yml sets under `extract:`. Falls back to pure
+        defaults if the file is missing, empty, or has no `extract:` key,
+        so this script always runs with zero setup required.
+    """
+    try:
+        with open(config_path) as f:
+            file_config = (yaml.safe_load(f) or {}).get('extract', {}) or {}
+    except FileNotFoundError:
+        file_config = {}
+    return {**_EXTRACT_CONFIG_DEFAULTS, **file_config}
+
+
+_config = load_extract_config()
+DEFAULT_REPO_OWNER = _config['repo_owner']
+DEFAULT_REPO_NAME = _config['repo_name']
+MAX_PAGES = _config['max_pages']          # Fetch at most this many pages of commits per run
+PER_PAGE = _config['per_page']            # GitHub API results per page
+MAX_CONNECTION_RETRIES = _config['max_connection_retries']  # Retries for the underlying HTTP connection (see note below)
+RETRY_BACKOFF_FACTOR = _config['retry_backoff_factor']  # Seconds; urllib3 sleeps backoff_factor * (2 ** (retry_count - 1))
 # HTTP status codes worth retrying: 429 (explicit rate limit) and 5xx (transient
 # server errors). Deliberately excludes GitHub's 403, which is used for BOTH
 # rate-limit responses and genuine permission/auth failures (e.g. a bad token)
 # that retrying would never fix — forcing retries there would just waste time
 # on a broken token.
-RETRYABLE_STATUS_CODES = [429, 500, 502, 503, 504]
+RETRYABLE_STATUS_CODES = _config['retryable_status_codes']
 
 
 def get_commits(repo_owner: str, repo_name: str) -> list[dict]:

@@ -11,6 +11,9 @@ botocore
 # We removed 'dotenv' because it conflicts with python-dotenv
 python-dotenv
 
+# --- Config (config.yml at repo root) ---
+pyyaml
+
 # --- Transformation (Critical for your project) ---
 # You didn't list these, but you NEED them for the container to run dbt
 dbt-core

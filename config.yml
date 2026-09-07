@@ -1,0 +1,31 @@
+# Central config for tunable, non-secret pipeline settings.
+#
+# Secrets (tokens, keys, passwords) never go here — they stay in .env
+# (see .env.example), which is gitignored.
+#
+# Every value below has a hardcoded fallback in the script that reads it
+# (src/extract.py, orchestration/dags/elt_dag.py), matching what used to
+# be hardcoded directly in that script's source. So both scripts still run
+# correctly with zero args if this file is missing or a key is absent —
+# this file only lets you override the defaults without editing code.
+#
+# Reproducibility note: this pipeline has no RNG-based nondeterminism to
+# seed (no sampling/shuffling/ML training anywhere in the codebase). The
+# only run-to-run variation is wall-clock timestamping — the extract
+# output filename and the load step's ingested_at column — which is
+# supposed to differ per run; there is nothing to seed there.
+
+extract:
+  repo_owner: apache
+  repo_name: airflow
+  max_pages: 5              # pages of commits fetched per run (~150 commits at per_page=30)
+  per_page: 30              # GitHub API results per page
+  max_connection_retries: 3
+  retry_backoff_factor: 1.0 # seconds; urllib3 sleeps backoff_factor * (2 ** (retry_count - 1))
+  retryable_status_codes: [429, 500, 502, 503, 504]
+
+orchestration:
+  schedule_interval: "@daily"
+  retries: 1
+  retry_delay_minutes: 5
+  start_date: "2024-01-01"

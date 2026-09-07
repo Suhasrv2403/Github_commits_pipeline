@@ -23,6 +23,7 @@ services:
       - ../transform/my_pipeline:/opt/airflow/dbt
       - ~/.dbt:/opt/airflow/.dbt
       - ../.env:/opt/airflow/.env
+      - ../config.yml:/opt/airflow/config.yml
     ports:
       - "8080:8080"
     # --- UPDATED COMMAND ---
