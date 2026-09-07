@@ -35,3 +35,26 @@ jobs:
           cp ci_profiles.yml profiles.yml
           dbt deps
           dbt compile --profiles-dir . --profile ci_profile
+
+      - name: Run dbt Build + Test
+        run: |
+          cd transform/my_pipeline
+          dbt build --profiles-dir . --profile ci_profile
+
+  python_tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v2
+
+      - name: Install Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: pip install -r requirements-dev.txt
+
+      - name: Run tests
+        run: pytest tests/ -v
