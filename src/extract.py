@@ -18,7 +18,7 @@ Output:
     API (no transformation applied here).
 
 Invoked as a script (`python src/extract.py`) by the `extract_github_data`
-task in airflow/dags/elt_dag.py.
+task in orchestration/dags/elt_dag.py.
 """
 import os
 import requests

@@ -48,7 +48,7 @@ graph LR
 
 ## 📂 Project Structure
 ```bash
-├── airflow/
+├── orchestration/
 │   ├── dags/                  # Airflow DAGs (Pipeline logic)
 │   ├── Dockerfile             # Airflow image (adds dbt/boto3/etc.)
 │   └── docker-compose.yaml    # Local Airflow + Postgres stack
@@ -58,8 +58,12 @@ graph LR
 │   ├── models/                # SQL transformation logic (Staging & Fact)
 │   ├── tests/                 # Custom data quality tests
 │   └── dbt_project.yml        # dbt configuration
+├── config/
+│   └── ci_profiles.yml        # dbt connection profile used only in CI
+├── tests/                     # Python unit tests (pytest)
 ├── .github/workflows/         # CI/CD YAML configurations
 ├── requirements.txt           # Python dependencies
+├── LICENSE
 └── README.md                  # System Documentation
 ```
 ## 📊 Data Modeling (dbt)
@@ -84,7 +88,7 @@ the file has a one-liner for generating the latter). Never commit `.env`.
 
 ### 3. Start Airflow (Docker Compose)
 ```bash
-docker compose --env-file .env -f airflow/docker-compose.yaml up
+docker compose --env-file .env -f orchestration/docker-compose.yaml up
 ```
 
 ### 4. Trigger the Pipeline

@@ -32,7 +32,7 @@ jobs:
         run: |
           cd transform/my_pipeline
           ls -la
-          cp ci_profiles.yml profiles.yml
+          cp ../../config/ci_profiles.yml profiles.yml
           dbt deps
           dbt compile --profiles-dir . --profile ci_profile
 

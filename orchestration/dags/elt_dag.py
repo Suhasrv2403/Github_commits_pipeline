@@ -2,7 +2,7 @@
 
 Defines the `elt_pipeline` DAG, which runs daily and chains three
 BashOperator tasks against the project's Python/dbt code (mounted into
-the Airflow container, see airflow/docker-compose.yaml):
+the Airflow container, see orchestration/docker-compose.yaml):
 
     extract_github_data -> dbt_transform -> dbt_test
 

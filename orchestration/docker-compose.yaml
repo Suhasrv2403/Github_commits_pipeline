@@ -1,7 +1,7 @@
 # Run from the repo root with:
-#   docker compose --env-file .env -f airflow/docker-compose.yaml up
+#   docker compose --env-file .env -f orchestration/docker-compose.yaml up
 # so that the ${...} substitutions below resolve from the same .env file
-# used by src/extract.py and airflow/dags/elt_dag.py (see .env.example).
+# used by src/extract.py and orchestration/dags/elt_dag.py (see .env.example).
 # Generate a Fernet key with:
 #   python3 -c "import base64,os;print(base64.urlsafe_b64encode(os.urandom(32)).decode())"
 version: '3'
