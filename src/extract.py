@@ -26,6 +26,7 @@ import json
 import boto3
 from datetime import datetime
 from dotenv import load_dotenv
+from urllib3.util.retry import Retry
 load_dotenv()
 # Load secrets from Environment Variables (Docker will provide these)
 GITHUB_TOKEN = os.getenv('GITHUB_TOKEN')
@@ -40,6 +41,13 @@ DEFAULT_REPO_NAME = 'airflow'
 MAX_PAGES = 5          # Fetch at most 5 pages (~150 commits) per run
 PER_PAGE = 30          # GitHub API results per page
 MAX_CONNECTION_RETRIES = 3  # Retries for the underlying HTTP connection (see note below)
+RETRY_BACKOFF_FACTOR = 1.0  # Seconds; urllib3 sleeps backoff_factor * (2 ** (retry_count - 1))
+# HTTP status codes worth retrying: 429 (explicit rate limit) and 5xx (transient
+# server errors). Deliberately excludes GitHub's 403, which is used for BOTH
+# rate-limit responses and genuine permission/auth failures (e.g. a bad token)
+# that retrying would never fix — forcing retries there would just waste time
+# on a broken token.
+RETRYABLE_STATUS_CODES = [429, 500, 502, 503, 504]
 
 
 def get_commits(repo_owner: str, repo_name: str) -> list[dict]:
@@ -62,11 +70,15 @@ def get_commits(repo_owner: str, repo_name: str) -> list[dict]:
 
     # "Session" object allows us to enable Retries
     session = requests.Session()
-    # NOTE: max_retries here only retries at the connection level (DNS/connect
-    # failures, dropped connections). It does NOT retry on HTTP error status
-    # codes (e.g. a 403 GitHub rate-limit response), since no `Retry(status_forcelist=...)`
-    # is configured. See the review summary for a flagged inefficiency here.
-    adapter = requests.adapters.HTTPAdapter(max_retries=MAX_CONNECTION_RETRIES)
+    # Retries both connection-level failures (DNS/dropped connections, via
+    # `total`) and the transient HTTP statuses in RETRYABLE_STATUS_CODES,
+    # with exponential backoff so we don't hammer a rate-limited API.
+    retry_strategy = Retry(
+        total=MAX_CONNECTION_RETRIES,
+        status_forcelist=RETRYABLE_STATUS_CODES,
+        backoff_factor=RETRY_BACKOFF_FACTOR,
+    )
+    adapter = requests.adapters.HTTPAdapter(max_retries=retry_strategy)
     session.mount('https://', adapter)
 
     all_commits = []
