@@ -20,10 +20,11 @@ services:
       - ./dags:/opt/airflow/dags
       - ./logs:/opt/airflow/logs
       - ../src:/opt/airflow/src
+      - ../scripts:/opt/airflow/scripts
       - ../transform/my_pipeline:/opt/airflow/dbt
       - ~/.dbt:/opt/airflow/.dbt
       - ../.env:/opt/airflow/.env
-      - ../config.yml:/opt/airflow/config.yml
+      - ../configs:/opt/airflow/configs
     ports:
       - "8080:8080"
     # --- UPDATED COMMAND ---

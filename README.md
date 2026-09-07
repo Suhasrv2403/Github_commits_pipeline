@@ -48,19 +48,24 @@ graph LR
 
 ## 📂 Project Structure
 ```bash
+├── src/
+│   └── extract.py             # Core library: GitHub API + S3 upload functions
+├── scripts/
+│   └── run_extract.py         # CLI entry point that calls into src/extract.py
 ├── orchestration/
 │   ├── dags/                  # Airflow DAGs (Pipeline logic)
 │   ├── Dockerfile             # Airflow image (adds dbt/boto3/etc.)
 │   └── docker-compose.yaml    # Local Airflow + Postgres stack
-├── src/
-│   └── extract.py             # GitHub -> S3 extraction script
 ├── transform/my_pipeline/     # dbt project
 │   ├── models/                # SQL transformation logic (Staging & Fact)
-│   ├── tests/                 # Custom data quality tests
+│   ├── macros/                # load_raw_commits: S3 -> Snowflake COPY INTO
+│   ├── analyses/              # One-time setup SQL (not run automatically)
 │   └── dbt_project.yml        # dbt configuration
-├── config/
+├── configs/
+│   ├── config.yml             # Non-secret tunable settings (pagination, schedule, ...)
 │   └── ci_profiles.yml        # dbt connection profile used only in CI
 ├── tests/                     # Python unit tests (pytest)
+├── docs/                      # Design notes, limitations, references
 ├── .github/workflows/         # CI/CD YAML configurations
 ├── requirements.txt           # Python dependencies
 ├── LICENSE

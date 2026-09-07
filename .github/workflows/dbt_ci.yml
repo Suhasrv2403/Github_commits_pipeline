@@ -32,7 +32,7 @@ jobs:
         run: |
           cd transform/my_pipeline
           ls -la
-          cp ../../config/ci_profiles.yml profiles.yml
+          cp ../../configs/ci_profiles.yml profiles.yml
           dbt deps
           dbt compile --profiles-dir . --profile ci_profile
 
@@ -57,7 +57,7 @@ jobs:
         run: pip install -r requirements-dev.txt
 
       - name: Lint
-        run: ruff check src/ tests/ orchestration/dags/ conftest.py
+        run: ruff check src/ scripts/ tests/ orchestration/dags/ conftest.py
 
       - name: Run tests
         run: pytest tests/ -v

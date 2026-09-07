@@ -1,9 +1,14 @@
-"""Extract step of the ELT pipeline.
+"""Core extraction/upload library for the GitHub-to-S3 step of the ELT pipeline.
 
 Pulls recent commits for a hardcoded GitHub repository via the GitHub REST
-API and uploads the raw JSON response to an S3 bucket (under the `raw/`
-prefix) for later ingestion into Snowflake by the dbt layer
-(see transform/my_pipeline/models/stg_commits.sql).
+API (get_commits) and uploads the raw JSON response to an S3 bucket, under
+the `raw/` prefix (upload_to_s3), for later ingestion into Snowflake by the
+dbt layer (see transform/my_pipeline/models/stg_commits.sql).
+
+This module holds only the reusable library code — no CLI/`__main__` block.
+The command-line entry point that actually runs this at task time is
+scripts/run_extract.py, invoked as `python scripts/run_extract.py` by the
+extract_github_data task in orchestration/dags/elt_dag.py.
 
 Inputs (environment variables, loaded from a local `.env` file via
 python-dotenv, or injected by Docker/Airflow):
@@ -12,17 +17,14 @@ python-dotenv, or injected by Docker/Airflow):
     AWS_ACCESS_KEY_ID       - AWS access key
     AWS_SECRET_ACCESS_KEY   - AWS secret key
 
-Tunable (non-secret) settings are read from config.yml at the repo root
-(the `extract:` section) if present, falling back to the defaults below
-so this script still runs correctly with zero setup.
+Tunable (non-secret) settings are read from configs/config.yml at the repo
+root (the `extract:` section) if present, falling back to the defaults
+below so this module still works correctly with zero setup.
 
 Output:
     An object written to `s3://$AWS_BUCKET/raw/commits_<YYYYMMDD>.json`
     containing the raw list of GitHub commit objects as returned by the
     API (no transformation applied here).
-
-Invoked as a script (`python src/extract.py`) by the `extract_github_data`
-task in orchestration/dags/elt_dag.py.
 """
 import os
 import requests
@@ -30,7 +32,6 @@ import json
 import boto3
 import yaml
 from pathlib import Path
-from datetime import datetime
 from dotenv import load_dotenv
 from urllib3.util.retry import Retry
 load_dotenv()
@@ -40,9 +41,9 @@ AWS_BUCKET = os.getenv('AWS_BUCKET')
 AWS_ACCESS_KEY = os.getenv('AWS_ACCESS_KEY_ID')
 AWS_SECRET_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
 
-# Repo-root config.yml path (this file lives in src/, config.yml is one
-# level up). Kept as a module constant so tests can monkeypatch it.
-CONFIG_PATH = Path(__file__).resolve().parent.parent / "config.yml"
+# configs/config.yml path (this file lives in src/, configs/ is a sibling
+# one level up). Kept as a module constant so tests can monkeypatch it.
+CONFIG_PATH = Path(__file__).resolve().parent.parent / "configs" / "config.yml"
 
 # Defaults, used verbatim if config.yml is missing or doesn't set a key —
 # these match what used to be hardcoded directly in this file.
@@ -173,10 +174,3 @@ def upload_to_s3(data: list[dict], filename: str) -> None:
         print(f"Success! Uploaded {filename} to S3.")
     except Exception as e:
         print(f"S3 Upload Failed: {e}")
-
-
-if __name__ == "__main__":
-    commits = get_commits(DEFAULT_REPO_OWNER, DEFAULT_REPO_NAME)
-    if commits:
-        file_name = f"commits_{datetime.now().strftime('%Y%m%d')}.json"
-        upload_to_s3(commits, file_name)

@@ -48,5 +48,5 @@ def test_repo_root_config_yml_is_used_by_default():
     """extract.CONFIG_PATH should point at the real repo-root config.yml,
     and the module-level constants derived from it should match its
     current on-disk values (guards against the two drifting apart)."""
-    assert extract.CONFIG_PATH == Path(__file__).resolve().parent.parent / "config.yml"
+    assert extract.CONFIG_PATH == Path(__file__).resolve().parent.parent / "configs" / "config.yml"
     assert extract.CONFIG_PATH.exists()
