@@ -1,4 +1,4 @@
-# 🚀 End-to-End ELT Data Pipeline (GitHub to Snowflake)
+# GitHub Commit Analytics Pipeline
 
 [![CI/CD Pipeline](https://github.com/Suhasrv2403/Github_commits_pipeline/actions/workflows/dbt_ci.yml/badge.svg)](https://github.com/Suhasrv2403/Github_commits_pipeline/actions)
 [![dbt](https://img.shields.io/badge/dbt-Core-FF694B?logo=dbt&logoColor=white)](https://www.getdbt.com/)
@@ -7,98 +7,94 @@
 [![AWS](https://img.shields.io/badge/AWS-S3-232F3E?logo=amazon-aws&logoColor=white)](https://aws.amazon.com/)
 [![Python](https://img.shields.io/badge/Python-3.9+-3776AB?logo=python&logoColor=white)](https://www.python.org/)
 
-## 📖 Project Overview
-This project is a production-grade **ELT (Extract, Load, Transform)** pipeline designed to analyze development velocity. It ingests raw data from the GitHub API, moves it through a cloud-native architecture, and models it for analytics.
+An automated ELT pipeline that pulls commit activity from the GitHub API,
+lands it in S3, loads it into Snowflake, and transforms it into
+analytics-ready tables with dbt — orchestrated daily by Airflow and
+gated by CI (lint + unit tests + `dbt build`) on every push. It's built
+the way a real data platform team ships a pipeline: config-driven, no
+hardcoded secrets, reproducible from a clean checkout, and tested at the
+extraction layer where the actual logic (pagination, retries, error
+handling) lives.
 
-The goal was to build a system that mimics a real-world enterprise data platform, focusing on **automation, security (key rotation/secrets management), and CI/CD**.
+**Stack:** Python · Apache Airflow · dbt · Snowflake · AWS S3 · Docker · GitHub Actions · pytest · ruff
 
-## 🏗️ System Architecture
+## Why this matters
 
-This pipeline follows a modular architecture ensuring separation of concerns between ingestion, storage, and transformation.
+Engineering teams generate a constant stream of commit activity, but
+that signal is locked inside GitHub's own UI and invisible to anyone
+who isn't a developer. This pipeline turns raw commit history into a
+queryable warehouse table — who committed what, and when — so an
+engineering manager, a data team, or an internal dashboard can build
+velocity tracking, contributor reporting, or release-readiness checks
+on top of it, without anyone manually exporting CSVs from GitHub.
+
+## Architecture
 
 ```mermaid
 graph LR
-    subgraph Ingestion ["Ingestion Layer"]
-        API[GitHub API] -->|Python Request| Local[Ingestion Script]
-        Local -->|Boto3| S3[(AWS S3 Data Lake)]
-    end
-
-    subgraph Warehouse ["Storage & Compute (Snowflake)"]
-        S3 -->|COPY INTO| Raw[Raw Tables]
-        Raw -->|dbt| Stg[Staging Views]
-        Stg -->|dbt| Fact[Fact Tables]
-    end
-
-    subgraph Orchestration ["Orchestration & CI/CD"]
-        Airflow[Apache Airflow] -->|Trigger| Local
-        Airflow -->|Trigger| Raw
-        Airflow -->|Trigger| Fact
-        GitHub[GitHub Actions] -.->|CI Test| Warehouse
-    end
-
-    style S3 fill:#E15554,stroke:#333,stroke-width:2px,color:white
-    style Raw fill:#29b5e8,stroke:#333,stroke-width:2px,color:white
-    style Fact fill:#29b5e8,stroke:#333,stroke-width:2px,color:white
-    style Airflow fill:#00C7B7,stroke:#333,stroke-width:2px,color:white
-
+    API[GitHub API] -->|extract| S3[(S3 raw/)]
+    S3 -->|COPY INTO| Raw[RAW_COMMITS]
+    Raw -->|dbt| Stg[stg_commits]
+    Stg -->|dbt| Fact[fact_commits]
+    Airflow[Airflow DAG] -.daily.-> API
+    CI[GitHub Actions] -.lint + test + build.-> Fact
 ```
-* **Automated Quality Checks:** GitHub Actions pipeline runs `dbt run` and `dbt test` against a clean Snowflake schema on every push to ensure code stability.
-* **Infrastructure as Code:** Snowflake Stages and File Formats are managed via SQL scripts.
-* **Idempotency:** The pipeline is designed to be re-runnable; duplicate data ingestion is handled during the transformation layer.
 
-## 📂 Project Structure
-```bash
-├── src/
-│   └── extract.py             # Core library: GitHub API + S3 upload functions
-├── scripts/
-│   └── run_extract.py         # CLI entry point that calls into src/extract.py
-├── orchestration/
-│   ├── dags/                  # Airflow DAGs (Pipeline logic)
-│   ├── Dockerfile             # Airflow image (adds dbt/boto3/etc.)
-│   └── docker-compose.yaml    # Local Airflow + Postgres stack
-├── transform/my_pipeline/     # dbt project
-│   ├── models/                # SQL transformation logic (Staging & Fact)
-│   ├── macros/                # load_raw_commits: S3 -> Snowflake COPY INTO
-│   ├── analyses/              # One-time setup SQL (not run automatically)
-│   └── dbt_project.yml        # dbt configuration
-├── configs/
-│   ├── config.yml             # Non-secret tunable settings (pagination, schedule, ...)
-│   └── ci_profiles.yml        # dbt connection profile used only in CI
-├── tests/                     # Python unit tests (pytest)
-├── docs/                      # Design notes, limitations, references
-├── .github/workflows/         # CI/CD YAML configurations
-├── requirements.txt           # Python dependencies
-├── LICENSE
-└── README.md                  # System Documentation
-```
-## 📊 Data Modeling (dbt)
-* The transformation layer follows Dimensional Modeling principles:
+Four Airflow tasks run in sequence: `extract_github_data -> load_to_snowflake
+-> dbt_transform -> dbt_test`. Full task-by-task breakdown, the dbt
+lineage, and the reasoning behind each design decision are in
+[docs/DESIGN.md](docs/DESIGN.md).
 
-* stg_commits: cleans raw JSON data and casts timestamps/author names into typed columns.
+## How to run
 
-* fact_commits: materializes one row per commit (with a derived `commit_date`) for daily reporting.
-
-## 🚀 How to Run Locally
-
-### 1. Clone the Repository
 ```bash
 git clone https://github.com/Suhasrv2403/Github_commits_pipeline.git
 cd Github_commits_pipeline
-```
-
-### 2. Configure Secrets
-Copy [.env.example](.env.example) to `.env` in the root directory and fill in real values
-(GitHub token, AWS keys, Snowflake credentials, and an Airflow Fernet key —
-the file has a one-liner for generating the latter). Never commit `.env`.
-
-### 3. Start Airflow (Docker Compose)
-```bash
+cp .env.example .env   # fill in GitHub/AWS/Snowflake creds + a generated Fernet key
 docker compose --env-file .env -f orchestration/docker-compose.yaml up
 ```
 
-### 4. Trigger the Pipeline
-* Access the UI at http://localhost:8080 and toggle the `elt_pipeline` DAG to ON.
+Then open http://localhost:8080 and toggle the `elt_pipeline` DAG on.
+Non-secret, tunable settings — which repo to pull, page counts, retry
+policy, schedule — live in [configs/config.yml](configs/config.yml), not
+in code.
 
+Run the checks CI runs, locally:
+```bash
+pip install -r requirements-dev.txt
+ruff check src/ scripts/ tests/ orchestration/dags/ conftest.py
+pytest tests/ -v
+```
+
+## At scale
+
+This pipeline is sized to demonstrate the pattern on one repo, not to
+run against every repo in a large org. Getting there would mean
+replacing the fixed 5-page GitHub fetch with cursor-based pagination
+(the `Link` header, or the GraphQL API) so history stops being silently
+truncated; moving Airflow from `LocalExecutor` to `CeleryExecutor` or
+`KubernetesExecutor` so many repos can extract and transform in
+parallel; and adding a dead-letter path for records that fail to load
+instead of today's `ON_ERROR = 'continue'`. It would also need real
+monitoring — Airflow SLAs/alerts and dbt source-freshness checks —
+rather than relying on someone noticing a red DAG in the UI.
+
+## Repo structure
+
+```bash
+├── src/                     # Core library: GitHub API + S3 upload functions
+├── scripts/                 # CLI entry point (calls into src/)
+├── orchestration/           # Airflow DAG, Dockerfile, docker-compose
+├── transform/my_pipeline/   # dbt project: models, macros, one-time setup SQL
+├── configs/                 # config.yml (tunable settings), ci_profiles.yml
+├── tests/                   # pytest unit tests
+├── docs/                    # Design notes, limitations, references
+└── .github/workflows/       # CI: lint + pytest + dbt build/test
+```
+
+Deep technical detail — the full dbt lineage, security/reproducibility
+decisions, known limitations, and references — lives in
+[docs/DESIGN.md](docs/DESIGN.md) rather than here.
+
+---
 Built by Suhas Ramesh Vittal
-
-
